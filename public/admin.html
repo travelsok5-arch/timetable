@@ -1,1 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Timetable Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+        }
+        .message-user {
+            background-color: #3B82F6;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            margin-left: auto;
+        }
+        .message-admin {
+            background-color: #E5E7EB;
+            color: #374151;
+            border-radius: 18px 18px 18px 4px;
+            margin-right: auto;
+        }
+        .typing-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #9CA3AF;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-indicator:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        .status-open { background-color: #3B82F6; color: white; }
+        .status-in-progress { background-color: #F59E0B; color: white; }
+        .status-resolved { background-color: #10B981; color: white; }
+        .status-closed { background-color: #6B7280; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Header -->
+    <header class="bg-gradient-to-r from-red-600 to-purple-700 text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <!-- Logo and Brand -->
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-shield-alt text-2xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">Admin Panel</h1>
+                        <p class="text-red-100 text-sm">Timetable Pro Management</p>
+                    </div>
+                </div>
 
+                <!-- User Info and Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- User Profile -->
+                    <div class="flex items-center space-x-2 bg-red-500/20 px-3 py-2 rounded-lg">
+                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-shield text-sm"></i>
+                        </div>
+                        <div class="hidden md:block">
+                            <div class="text-sm font-medium" id="adminName">Loading...</div>
+                            <div class="text-xs text-red-200">Administrator</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="flex space-x-2">
+                        <button onclick="window.location.href='/timetable'" class="p-2 rounded-lg hover:bg-white/10 transition" title="Go to Timetable">
+                            <i class="fas fa-calendar"></i>
+                        </button>
+                        <button id="logoutBtn" class="p-2 rounded-lg hover:bg-white/10 transition" title="Logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 space-y-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold text-blue-600" id="statTotalUsers">0</div>
+                        <div class="text-sm text-gray-600">Total Users</div>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-users text-blue-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold text-green-600" id="statActiveUsers">0</div>
+                        <div class="text-sm text-gray-600">Active Users</div>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-check text-green-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold text-purple-600" id="statTotalTasks">0</div>
+                        <div class="text-sm text-gray-600">Total Tasks</div>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-tasks text-purple-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-2xl font-bold text-orange-600" id="statRecentActivity">0</div>
+                        <div class="text-sm text-gray-600">Recent Activity</div>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-chart-line text-orange-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Management Section -->
+        <div class="glass-card rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-headset text-green-500 mr-2"></i>Support Management
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Support Tickets List -->
+                <div class="lg:col-span-1">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-800">Support Tickets</h3>
+                        <div class="flex space-x-2">
+                            <select id="ticketFilter" class="text-sm border border-gray-300 rounded px-2 py-1">
+                                <option value="all">All Tickets</option>
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            <button onclick="loadSupportTickets()" class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                                <i class="fas fa-refresh"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="supportTicketsList" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Support tickets will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Chat Section -->
+                <div class="lg:col-span-2">
+                    <div class="border rounded-lg">
+                        <!-- Chat Header -->
+                        <div class="bg-gray-50 px-4 py-3 border-b">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h5 class="font-semibold" id="chatTicketSubject">Select a ticket to start chatting</h5>
+                                    <p class="text-sm text-gray-600" id="chatTicketInfo"></p>
+                                </div>
+                                <div id="chatTicketStatus" class="hidden">
+                                    <span class="px-2 py-1 text-xs rounded-full status-open">Open</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Messages Container -->
+                        <div id="chatMessages" class="chat-container p-4 space-y-3 bg-gray-50">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-comments text-3xl mb-2"></i>
+                                <p>Select a support ticket to view messages</p>
+                            </div>
+                        </div>
+
+                        <!-- Message Input -->
+                        <div class="p-4 border-t bg-white">
+                            <div class="flex space-x-2">
+                                <input type="text" id="chatMessageInput" 
+                                    placeholder="Type your message..." 
+                                    class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    disabled>
+                                <button id="sendMessageBtn" 
+                                    class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div id="typingIndicator" class="hidden mt-2 text-sm text-gray-500">
+                                <div class="flex items-center">
+                                    <span class="mr-2">Admin is typing</span>
+                                    <div class="typing-indicator"></div>
+                                    <div class="typing-indicator"></div>
+                                    <div class="typing-indicator"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ticket Actions -->
+                    <div id="ticketActions" class="hidden mt-4 flex space-x-2">
+                        <select id="ticketStatusSelect" class="flex-1 p-2 border border-gray-300 rounded">
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <button onclick="updateTicketStatus()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Update Status
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Management -->
+        <div class="glass-card rounded-xl shadow-md p-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-3 md:space-y-0">
+                <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                    <i class="fas fa-users text-blue-500 mr-2"></i>Users Management
+                </h2>
+                <div class="flex space-x-3">
+                    <input type="text" id="userSearch" placeholder="Search users..." 
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <button onclick="loadUsers()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        <i class="fas fa-search mr-2"></i>Search
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Profile</th>
+                            <th class="px-4 py-3 text-left">Username</th>
+                            <th class="px-4 py-3 text-left">Email</th>
+                            <th class="px-4 py-3 text-left">Phone</th>
+                            <th class="px-4 py-3 text-left">Role</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-left">Last Login</th>
+                            <th class="px-4 py-3 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-between items-center mt-4">
+                <div class="text-sm text-gray-600" id="paginationInfo"></div>
+                <div class="flex space-x-2">
+                    <button id="prevPage" class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">Previous</button>
+                    <button id="nextPage" class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="glass-card rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-history text-purple-500 mr-2"></i>Recent Activity
+            </h2>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                <div id="activityList">
+                    <!-- Activity will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Edit Modal -->
+    <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="glass-card rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Edit User</h3>
+                <button onclick="hideEditUserModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="editUserForm" class="space-y-4">
+                <input type="hidden" id="editUserId">
+                
+                <!-- Profile Picture Section -->
+                <div class="text-center">
+                    <div class="relative inline-block">
+                        <img id="editUserProfilePicture" 
+                             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwODYgMTQuMjA5MSA0IDEyIDRDOS43OTA4NiA0IDggNS43OTA4NiA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjOEU5MEE2Ii8+CjxwYXRoIGQ9Ik0xMiAxNEM5LjMzIDE0IDQgMTUuMzQgNCAxOFYyMEgyMFYxOEMyMCAxNS4zNCAxNC42NyAxNCAxMiAxNFoiIGZpbGw9IiM4RTkwQTYiLz4KPC9zdmc+" 
+                             alt="Profile Picture"
+                             class="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-lg object-cover bg-gray-200">
+                        <div class="absolute bottom-0 right-0">
+                            <label for="profilePictureInput" class="cursor-pointer">
+                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition">
+                                    <i class="fas fa-camera text-sm"></i>
+                                </div>
+                            </label>
+                            <input type="file" id="profilePictureInput" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" onclick="removeProfilePicture()" class="text-sm text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash mr-1"></i>Remove Picture
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="editUsername" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="editEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <input type="tel" id="editPhone" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <select id="editRole" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="editIsActive" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-600">Active User</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">If unchecked, user cannot login to the system</p>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="submit" class="flex-1 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                        Update User
+                    </button>
+                    <button type="button" onclick="showResetPasswordModal()" class="flex-1 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold">
+                        Reset Password
+                    </button>
+                </div>
+            </form>
+            
+            <div id="editUserMessage" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="glass-card rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Reset Password</h3>
+                <button onclick="hideResetPasswordModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="resetPasswordForm" class="space-y-4">
+                <input type="hidden" id="resetPasswordUserId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                    <input type="password" id="newUserPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required minlength="6">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                    <input type="password" id="confirmUserPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required minlength="6">
+                </div>
+                
+                <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold">
+                    Reset Password
+                </button>
+            </form>
+            
+            <div id="resetPasswordMessage" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-sign-out-alt text-red-500 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Confirm Logout</h3>
+                <p class="text-gray-600 mb-6">Are you sure you want to logout from Admin Panel?</p>
+                <div class="flex space-x-3">
+                    <button onclick="handleLogout()" class="flex-1 bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition font-semibold">
+                        Yes, Logout
+                    </button>
+                    <button onclick="hideLogoutModal()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notification" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden z-50 max-w-sm transition-all duration-300"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 flex items-center space-x-3">
+            <div class="loading-spinner"></div>
+            <span class="text-gray-700">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentUser = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentChatTicketId = null;
+        let chatRefreshInterval = null;
+        let supportTickets = [];
+        let currentEditingUserId = null;
+
+        // DOM Content Loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAuthentication();
+            setupEventListeners();
+            loadAdminData();
+        });
+
+        // Admin authentication check
+        function checkAdminAuthentication() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+            
+            // Verify token and check if user is admin
+            fetch('/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Invalid token');
+                }
+                return response.json();
+            })
+            .then(data => {
+                currentUser = data.user;
+                if (currentUser.role !== 'admin') {
+                    window.location.href = '/timetable';
+                    return;
+                }
+                updateAdminInterface();
+            })
+            .catch(error => {
+                console.error('Auth error:', error);
+                localStorage.removeItem('authToken');
+                window.location.href = '/';
+            });
+        }
+
+        function updateAdminInterface() {
+            if (currentUser) {
+                document.getElementById('adminName').textContent = currentUser.username;
+            }
+        }
+
+        function setupEventListeners() {
+            // Forms
+            document.getElementById('editUserForm').addEventListener('submit', handleUserUpdate);
+            document.getElementById('resetPasswordForm').addEventListener('submit', handlePasswordReset);
+            
+            // Search
+            document.getElementById('userSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loadUsers();
+                }
+            });
+            
+            // Pagination
+            document.getElementById('prevPage').addEventListener('click', goToPreviousPage);
+            document.getElementById('nextPage').addEventListener('click', goToNextPage);
+            
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', showLogoutModal);
+
+            // Support
+            document.getElementById('ticketFilter').addEventListener('change', loadSupportTickets);
+            document.getElementById('sendMessageBtn').addEventListener('click', sendAdminMessage);
+            document.getElementById('chatMessageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendAdminMessage();
+                }
+            });
+
+            // Profile picture upload
+            document.getElementById('profilePictureInput').addEventListener('change', handleProfilePictureUpload);
+        }
+
+        async function loadAdminData() {
+            showLoading();
+            try {
+                await Promise.all([
+                    loadStatistics(),
+                    loadUsers(),
+                    loadRecentActivity(),
+                    loadSupportTickets()
+                ]);
+            } catch (error) {
+                showNotification('Error loading admin data: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadStatistics() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/admin/statistics', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const stats = await response.json();
+                updateStatistics(stats);
+            }
+        }
+
+        async function loadUsers() {
+            const search = document.getElementById('userSearch').value;
+            const token = localStorage.getItem('authToken');
+            
+            const response = await fetch(`/api/admin/users?page=${currentPage}&limit=10&search=${encodeURIComponent(search)}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                renderUsersTable(data.users, data.pagination);
+            }
+        }
+
+        async function loadRecentActivity() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/admin/activity?limit=10', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const activities = await response.json();
+                renderRecentActivity(activities);
+            }
+        }
+
+        // Support Management Functions
+        async function loadSupportTickets() {
+            const filter = document.getElementById('ticketFilter').value;
+            const token = localStorage.getItem('authToken');
+            
+            let url = '/api/admin/support/tickets';
+            if (filter !== 'all') {
+                url += `?status=${filter}`;
+            }
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                supportTickets = await response.json();
+                renderSupportTickets();
+            }
+        }
+
+        function renderSupportTickets() {
+            const container = document.getElementById('supportTicketsList');
+            container.innerHTML = '';
+            
+            if (supportTickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-ticket-alt text-4xl mb-3"></i>
+                        <p>No support tickets found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            supportTickets.forEach(ticket => {
+                const statusClass = `status-${ticket.status}`;
+                const priorityClass = getPriorityBadgeClass(ticket.priority);
+                const isActive = currentChatTicketId === ticket.id ? 'bg-blue-50 border-blue-200' : 'bg-white';
+                
+                container.innerHTML += `
+                    <div class="border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer ${isActive}" 
+                         onclick="openAdminChat(${ticket.id})">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h5 class="font-semibold text-gray-800">${ticket.subject}</h5>
+                                <p class="text-sm text-gray-600 mt-1">${ticket.message.substring(0, 100)}${ticket.message.length > 100 ? '...' : ''}</p>
+                            </div>
+                            <div class="flex flex-col items-end space-y-1 ml-4">
+                                <span class="px-2 py-1 ${statusClass} text-xs rounded-full">${ticket.status}</span>
+                                <span class="px-2 py-1 ${priorityClass} text-xs rounded-full">${ticket.priority}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500">
+                            <span>By: ${ticket.username}</span>
+                            <span>${new Date(ticket.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function openAdminChat(ticketId) {
+            currentChatTicketId = ticketId;
+            const ticket = supportTickets.find(t => t.id === ticketId);
+            
+            if (!ticket) return;
+            
+            // Update chat header
+            document.getElementById('chatTicketSubject').textContent = ticket.subject;
+            document.getElementById('chatTicketInfo').textContent = `Ticket #${ticket.id} • By: ${ticket.username} • ${ticket.status}`;
+            document.getElementById('chatTicketStatus').innerHTML = `<span class="px-2 py-1 text-xs rounded-full status-${ticket.status}">${ticket.status}</span>`;
+            document.getElementById('chatTicketStatus').classList.remove('hidden');
+            
+            // Enable chat input
+            document.getElementById('chatMessageInput').disabled = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+            
+            // Show ticket actions
+            document.getElementById('ticketActions').classList.remove('hidden');
+            document.getElementById('ticketStatusSelect').value = ticket.status;
+            
+            // Load messages
+            await loadAdminChatMessages(ticketId);
+            
+            // Start auto-refresh
+            startChatAutoRefresh();
+            
+            // Re-render tickets to update active state
+            renderSupportTickets();
+        }
+
+        async function loadAdminChatMessages(ticketId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/support/tickets/${ticketId}/messages`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const messages = await response.json();
+                    renderAdminChatMessages(messages);
+                }
+            } catch (error) {
+                console.error('Error loading chat messages:', error);
+            }
+        }
+
+        function renderAdminChatMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-comments text-3xl mb-2"></i>
+                        <p>No messages yet</p>
+                        <p class="text-sm">Start the conversation</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messages.forEach(message => {
+                const isAdmin = message.role === 'admin';
+                const messageClass = isAdmin ? 'message-admin' : 'message-user';
+                const time = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                container.innerHTML += `
+                    <div class="flex ${isAdmin ? 'justify-start' : 'justify-end'}">
+                        <div class="max-w-xs lg:max-w-md">
+                            <div class="${messageClass} px-4 py-2">
+                                <p class="text-sm">${message.message}</p>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1 ${isAdmin ? 'text-left' : 'text-right'}">
+                                ${time} • ${message.username} ${message.role === 'admin' ? '(Admin)' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminMessage() {
+            const messageInput = document.getElementById('chatMessageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || !currentChatTicketId) return;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/support/tickets/${currentChatTicketId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (response.ok) {
+                    messageInput.value = '';
+                    await loadAdminChatMessages(currentChatTicketId);
+                } else {
+                    throw new Error('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showNotification('Failed to send message', 'error');
+            }
+        }
+
+        async function updateTicketStatus() {
+            if (!currentChatTicketId) return;
+            
+            const newStatus = document.getElementById('ticketStatusSelect').value;
+            const token = localStorage.getItem('authToken');
+            
+            try {
+                const response = await fetch(`/api/admin/support/tickets/${currentChatTicketId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    showNotification('Ticket status updated successfully!', 'success');
+                    loadSupportTickets();
+                    
+                    // Update current ticket status display
+                    const ticket = supportTickets.find(t => t.id === currentChatTicketId);
+                    if (ticket) {
+                        ticket.status = newStatus;
+                        document.getElementById('chatTicketStatus').innerHTML = `<span class="px-2 py-1 text-xs rounded-full status-${newStatus}">${newStatus}</span>`;
+                        document.getElementById('chatTicketInfo').textContent = `Ticket #${ticket.id} • By: ${ticket.username} • ${newStatus}`;
+                    }
+                } else {
+                    throw new Error('Failed to update ticket status');
+                }
+            } catch (error) {
+                console.error('Error updating ticket status:', error);
+                showNotification('Failed to update ticket status', 'error');
+            }
+        }
+
+        function startChatAutoRefresh() {
+            // Clear existing interval
+            if (chatRefreshInterval) {
+                clearInterval(chatRefreshInterval);
+            }
+            
+            // Refresh messages every 5 seconds
+            chatRefreshInterval = setInterval(async () => {
+                if (currentChatTicketId) {
+                    await loadAdminChatMessages(currentChatTicketId);
+                }
+            }, 5000);
+        }
+
+        function stopChatAutoRefresh() {
+            if (chatRefreshInterval) {
+                clearInterval(chatRefreshInterval);
+                chatRefreshInterval = null;
+            }
+        }
+
+        function getPriorityBadgeClass(priority) {
+            switch (priority) {
+                case 'high': return 'bg-red-100 text-red-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'low': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function updateStatistics(stats) {
+            document.getElementById('statTotalUsers').textContent = stats.total_users || 0;
+            document.getElementById('statActiveUsers').textContent = stats.active_users || 0;
+            document.getElementById('statTotalTasks').textContent = stats.total_tasks || 0;
+            document.getElementById('statRecentActivity').textContent = stats.recent_activity || 0;
+        }
+
+        function renderUsersTable(users, pagination) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-users text-4xl mb-3"></i>
+                            <p>No users found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            users.forEach(user => {
+                const statusBadge = user.is_active ? 
+                    '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>' :
+                    '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Inactive</span>';
+                
+                const roleBadge = user.role === 'admin' ? 
+                    '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Admin</span>' :
+                    '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">User</span>';
+                
+                // Profile picture or default avatar
+                const profilePicture = user.profile_picture || 
+                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwODYgMTQuMjA5MSA0IDEyIDRDOS43OTA4NiA0IDggNS43OTA4NiA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjOEU5MEE2Ii8+CjxwYXRoIGQ9Ik0xMiAxNEM5LjMzIDE0IDQgMTUuMzQgNCAxOFYyMEgyMFYxOEMyMCAxNS4zNCAxNC42NyAxNCAxMiAxNFoiIGZpbGw9IiM4RTkwQTYiLz4KPC9zdmc+';
+                
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <img src="${profilePicture}" 
+                                 alt="${user.username}" 
+                                 class="w-8 h-8 rounded-full object-cover border border-gray-200">
+                        </td>
+                        <td class="px-4 py-3">${user.username}</td>
+                        <td class="px-4 py-3">${user.email || 'N/A'}</td>
+                        <td class="px-4 py-3">${user.phone || 'N/A'}</td>
+                        <td class="px-4 py-3">${roleBadge}</td>
+                        <td class="px-4 py-3">${statusBadge}</td>
+                        <td class="px-4 py-3">${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
+                        <td class="px-4 py-3">
+                            <button onclick="editUser(${user.id})" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit User">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteUser(${user.id})" class="text-red-500 hover:text-red-700" title="Delete User">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            updatePagination(pagination);
+        }
+
+        function updatePagination(pagination) {
+            totalPages = pagination.pages || 1;
+            currentPage = pagination.page || 1;
+            
+            document.getElementById('paginationInfo').textContent = 
+                `Page ${currentPage} of ${totalPages} • Total ${pagination.total || 0} users`;
+            
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+
+        function goToPreviousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadUsers();
+            }
+        }
+
+        function goToNextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadUsers();
+            }
+        }
+
+        function renderRecentActivity(activities) {
+            const container = document.getElementById('activityList');
+            container.innerHTML = '';
+            
+            if (activities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-history text-4xl mb-3"></i>
+                        <p>No recent activity</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            activities.forEach(activity => {
+                const icon = getActivityIcon(activity.activity_type);
+                const color = getActivityColor(activity.activity_type);
+                
+                container.innerHTML += `
+                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 ${color} rounded-full flex items-center justify-center">
+                            <i class="${icon} text-white text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-800">${activity.description}</p>
+                            <p class="text-xs text-gray-500">${new Date(activity.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function getActivityIcon(type) {
+            switch (type) {
+                case 'LOGIN': return 'fas fa-sign-in-alt';
+                case 'REGISTER': return 'fas fa-user-plus';
+                case 'PROFILE_UPDATE': return 'fas fa-user-edit';
+                case 'TICKET_CREATED': return 'fas fa-ticket-alt';
+                case 'TICKET_UPDATED': return 'fas fa-edit';
+                default: return 'fas fa-info-circle';
+            }
+        }
+
+        function getActivityColor(type) {
+            switch (type) {
+                case 'LOGIN': return 'bg-green-500';
+                case 'REGISTER': return 'bg-blue-500';
+                case 'PROFILE_UPDATE': return 'bg-yellow-500';
+                case 'TICKET_CREATED': return 'bg-purple-500';
+                case 'TICKET_UPDATED': return 'bg-orange-500';
+                default: return 'bg-gray-500';
+            }
+        }
+
+        // User Management Functions - FIXED PROFILE PICTURE ISSUES
+        async function editUser(userId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    showEditUserModal(user);
+                    
+                    // Load profile picture
+                    await loadUserProfilePicture(userId);
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                showNotification('Error loading user data', 'error');
+            }
+        }
+
+        function showEditUserModal(user) {
+            currentEditingUserId = user.id;
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editRole').value = user.role;
+            document.getElementById('editIsActive').checked = user.is_active;
+            
+            // Reset file input
+            document.getElementById('profilePictureInput').value = '';
+            
+            document.getElementById('editUserModal').classList.remove('hidden');
+        }
+
+        async function loadUserProfilePicture(userId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/profile-picture`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const profileImg = document.getElementById('editUserProfilePicture');
+                    
+                    if (data.profilePicture) {
+                        profileImg.src = data.profilePicture;
+                        profileImg.classList.remove('bg-gray-200');
+                    } else {
+                        profileImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwODYgMTQuMjA5MSA0IDEyIDRDOS43OTA4NiA0IDggNS43OTA4NiA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjOEU5MEE2Ii8+CjxwYXRoIGQ9Ik0xMiAxNEM5LjMzIDE0IDQgMTUuMzQgNCAxOFYyMEgyMFYxOEMyMCAxNS4zNCAxNC42NyAxNCAxMiAxNFoiIGZpbGw9IiM4RTkwQTYiLz4KPC9zdmc+';
+                        profileImg.classList.add('bg-gray-200');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile picture:', error);
+                // Set default avatar on error
+                const profileImg = document.getElementById('editUserProfilePicture');
+                profileImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwODYgMTQuMjA5MSA0IDEyIDRDOS43OTA4NiA0IDggNS43OTA4NiA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjOEU5MEE2Ii8+CjxwYXRoIGQ9Ik0xMiAxNEM5LjMzIDE0IDQgMTUuMzQgNCAxOFYyMEgyMFYxOEMyMCAxNS4zNCAxNC42NyAxNCAxMiAxNFoiIGZpbGw9IiM4RTkwQTYiLz4KPC9zdmc+';
+                profileImg.classList.add('bg-gray-200');
+            }
+        }
+
+        function handleProfilePictureUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please select a valid image file', 'error');
+                return;
+            }
+
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showNotification('Image size should be less than 2MB', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageData = e.target.result;
+                updateUserProfilePicture(imageData);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function updateUserProfilePicture(imageData) {
+            const userId = document.getElementById('editUserId').value;
+            const token = localStorage.getItem('authToken');
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/profile-picture`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ imageData })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('editUserProfilePicture').src = data.profile_picture;
+                    showNotification('Profile picture updated successfully!', 'success');
+                    // Reload users to update the table
+                    loadUsers();
+                } else {
+                    throw new Error('Failed to update profile picture');
+                }
+            } catch (error) {
+                console.error('Error updating profile picture:', error);
+                showNotification('Failed to update profile picture', 'error');
+            }
+        }
+
+        async function removeProfilePicture() {
+            const userId = document.getElementById('editUserId').value;
+            const token = localStorage.getItem('authToken');
+            
+            if (!confirm('Are you sure you want to remove the profile picture?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/profile-picture`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const profileImg = document.getElementById('editUserProfilePicture');
+                    profileImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwODYgMTQuMjA5MSA0IDEyIDRDOS43OTA4NiA0IDggNS43OTA4NiA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjOEU5MEE2Ii8+CjxwYXRoIGQ9Ik0xMiAxNEM5LjMzIDE0IDQgMTUuMzQgNCAxOFYyMEgyMFYxOEMyMCAxNS4zNCAxNC42NyAxNCAxMiAxNFoiIGZpbGw9IiM4RTkwQTYiLz4KPC9zdmc+';
+                    profileImg.classList.add('bg-gray-200');
+                    showNotification('Profile picture removed successfully!', 'success');
+                    // Reload users to update the table
+                    loadUsers();
+                } else {
+                    throw new Error('Failed to remove profile picture');
+                }
+            } catch (error) {
+                console.error('Error removing profile picture:', error);
+                showNotification('Failed to remove profile picture', 'error');
+            }
+        }
+
+        async function handleUserUpdate(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('editUserId').value;
+            const userData = {
+                username: document.getElementById('editUsername').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                role: document.getElementById('editRole').value,
+                is_active: document.getElementById('editIsActive').checked
+            };
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    showNotification('User updated successfully!', 'success');
+                    loadUsers();
+                    hideEditUserModal();
+                } else {
+                    throw new Error('Failed to update user');
+                }
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showNotification('Failed to update user', 'error');
+            }
+        }
+
+        function hideEditUserModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+            document.getElementById('editUserMessage').classList.add('hidden');
+            // Reset file input
+            document.getElementById('profilePictureInput').value = '';
+            currentEditingUserId = null;
+        }
+
+        function showResetPasswordModal() {
+            const userId = document.getElementById('editUserId').value;
+            document.getElementById('resetPasswordUserId').value = userId;
+            document.getElementById('resetPasswordModal').classList.remove('hidden');
+        }
+
+        function hideResetPasswordModal() {
+            document.getElementById('resetPasswordModal').classList.add('hidden');
+            document.getElementById('resetPasswordMessage').classList.add('hidden');
+            document.getElementById('resetPasswordForm').reset();
+        }
+
+        async function handlePasswordReset(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('resetPasswordUserId').value;
+            const newPassword = document.getElementById('newUserPassword').value;
+            const confirmPassword = document.getElementById('confirmUserPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showFormMessage('resetPasswordMessage', 'Passwords do not match!', 'error');
+                return;
+            }
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ newPassword })
+                });
+                
+                if (response.ok) {
+                    showNotification('Password reset successfully!', 'success');
+                    hideResetPasswordModal();
+                } else {
+                    throw new Error('Failed to reset password');
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                showNotification('Failed to reset password', 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                return;
+            }
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('User deleted successfully!', 'success');
+                    loadUsers();
+                } else {
+                    throw new Error('Failed to delete user');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showNotification('Failed to delete user', 'error');
+            }
+        }
+
+        // UI Utility Functions
+        function showLogoutModal() {
+            document.getElementById('logoutModal').classList.remove('hidden');
+        }
+
+        function hideLogoutModal() {
+            document.getElementById('logoutModal').classList.add('hidden');
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('authToken');
+            window.location.href = '/';
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm transition-all duration-300 ${colors[type]}`;
+            notification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-${getNotificationIcon(type)}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            switch (type) {
+                case 'success': return 'check-circle';
+                case 'error': return 'exclamation-circle';
+                case 'warning': return 'exclamation-triangle';
+                default: return 'info-circle';
+            }
+        }
+
+        function showFormMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            const colors = {
+                success: 'bg-green-100 text-green-800 border border-green-200',
+                error: 'bg-red-100 text-red-800 border border-red-200',
+                warning: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+                info: 'bg-blue-100 text-blue-800 border border-blue-200'
+            };
+            
+            element.className = `mt-4 p-3 rounded-lg text-sm ${colors[type]}`;
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopChatAutoRefresh);
+    </script>
+</body>
+</html>

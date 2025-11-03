@@ -1,1 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Timetable Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            margin-top: 4px;
+            transition: all 0.3s ease;
+        }
+        .strength-weak { background-color: #ef4444; width: 25%; }
+        .strength-fair { background-color: #f59e0b; width: 50%; }
+        .strength-good { background-color: #10b981; width: 75%; }
+        .strength-strong { background-color: #059669; width: 100%; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-green-500 to-blue-600 p-6 text-center text-white">
+            <i class="fas fa-user-plus text-4xl mb-3"></i>
+            <h1 class="text-3xl font-bold">Join Timetable Pro</h1>
+            <p class="text-blue-100 mt-2">Create your professional account</p>
+        </div>
+        
+        <!-- Registration Form -->
+        <div class="p-6">
+            <form id="registerForm" class="space-y-4">
+                <!-- Username -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Username <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" id="username" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="Choose a username" required minlength="3" maxlength="20">
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1" id="usernameHelp">
+                        3-20 characters, letters, numbers, and underscores only
+                    </div>
+                    <div class="text-xs text-red-500 mt-1 hidden" id="usernameError"></div>
+                </div>
+                
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-3 top-3 text-gray-400"></i>
+                        <input type="email" id="email" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="your@email.com (optional)">
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Optional, for account recovery</div>
+                </div>
+                
+                <!-- Phone -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-phone absolute left-3 top-3 text-gray-400"></i>
+                        <input type="tel" id="phone" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="+1234567890" required>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Required for password recovery</div>
+                    <div class="text-xs text-red-500 mt-1 hidden" id="phoneError"></div>
+                </div>
+                
+                <!-- Date of Birth -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-calendar-alt absolute left-3 top-3 text-gray-400"></i>
+                        <input type="date" id="date_of_birth" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            required>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Required for account verification</div>
+                    <div class="text-xs text-red-500 mt-1 hidden" id="dobError"></div>
+                </div>
+                
+                <!-- Password -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Password <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="password" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="Create a strong password" required minlength="6">
+                        <button type="button" id="togglePassword" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength"></div>
+                    <div class="text-xs text-gray-500 mt-1" id="passwordHelp">
+                        Minimum 6 characters
+                    </div>
+                </div>
+                
+                <!-- Confirm Password -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Confirm Password <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="confirmPassword" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="Confirm your password" required>
+                    </div>
+                    <div class="text-xs text-red-500 mt-1 hidden" id="confirmPasswordError">
+                        Passwords do not match
+                    </div>
+                </div>
+                
+                <!-- Terms and Conditions -->
+                <div class="flex items-start space-x-3">
+                    <input type="checkbox" id="agreeTerms" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required>
+                    <label for="agreeTerms" class="text-sm text-gray-600">
+                        I agree to the 
+                        <a href="#" class="text-blue-600 hover:text-blue-500 font-medium">Terms of Service</a> 
+                        and 
+                        <a href="#" class="text-blue-600 hover:text-blue-500 font-medium">Privacy Policy</a>
+                        <span class="text-red-500">*</span>
+                    </label>
+                </div>
+                <div class="text-xs text-red-500 mt-1 hidden" id="termsError">
+                    You must agree to the terms and conditions
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" id="registerBtn" 
+                    class="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    <span>Create Account</span>
+                </button>
+            </form>
+            
+            <!-- Messages -->
+            <div id="errorMessage" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm hidden">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="errorText"></span>
+            </div>
+            
+            <div id="successMessage" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm hidden">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span id="successText"></span>
+            </div>
+            
+            <!-- Progress Steps -->
+            <div class="mt-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Account Security</span>
+                    <span class="text-xs text-gray-500" id="progressText">Step 1 of 3</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 33%"></div>
+                </div>
+            </div>
+            
+            <!-- Login Link -->
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">Already have an account?</p>
+                <a href="/" class="text-blue-600 hover:text-blue-500 font-semibold">Sign in here</a>
+            </div>
+        </div>
+        
+        <!-- Security Features -->
+        <div class="bg-gray-50 p-4 border-t border-gray-200">
+            <div class="text-center text-sm text-gray-600">
+                <div class="flex items-center justify-center space-x-4 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-shield-alt text-green-500 mr-1"></i>
+                        <span>Secure Registration</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-lock text-blue-500 mr-1"></i>
+                        <span>Data Encrypted</span>
+                    </div>
+                </div>
+                <p>Your information is protected with industry-standard security</p>
+            </div>
+        </div>
+    </div>
 
+    <!-- Registration Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-green-500 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">Registration Successful!</h3>
+            <p class="text-gray-600 mb-6">Your account has been created successfully. You will be redirected to login page shortly.</p>
+            <div class="flex space-x-3">
+                <button onclick="redirectToLogin()" class="flex-1 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                    Go to Login
+                </button>
+                <button onclick="stayOnPage()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition">
+                    Stay Here
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const registerForm = document.getElementById('registerForm');
+        const registerBtn = document.getElementById('registerBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        // Form validation state
+        let formState = {
+            usernameValid: false,
+            phoneValid: false,
+            dobValid: false,
+            passwordValid: false,
+            confirmPasswordValid: false,
+            termsAccepted: false
+        };
+
+        // Toggle password visibility
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            confirmPasswordInput.setAttribute('type', type);
+            this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
+
+        // Real-time form validation
+        document.getElementById('username').addEventListener('input', validateUsername);
+        document.getElementById('phone').addEventListener('input', validatePhone);
+        document.getElementById('date_of_birth').addEventListener('change', validateDateOfBirth);
+        document.getElementById('password').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+        document.getElementById('agreeTerms').addEventListener('change', validateTerms);
+
+        // Username validation
+        function validateUsername() {
+            const username = document.getElementById('username').value;
+            const usernameError = document.getElementById('usernameError');
+            const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+            
+            if (username.length === 0) {
+                formState.usernameValid = false;
+                usernameError.classList.add('hidden');
+                updateProgress();
+                return;
+            }
+            
+            if (!usernameRegex.test(username)) {
+                formState.usernameValid = false;
+                usernameError.textContent = 'Username must be 3-20 characters and contain only letters, numbers, and underscores';
+                usernameError.classList.remove('hidden');
+            } else {
+                formState.usernameValid = true;
+                usernameError.classList.add('hidden');
+            }
+            updateProgress();
+        }
+
+        // Phone validation
+        function validatePhone() {
+            const phone = document.getElementById('phone').value;
+            const phoneError = document.getElementById('phoneError');
+            
+            if (phone.length === 0) {
+                formState.phoneValid = false;
+                phoneError.classList.add('hidden');
+                updateProgress();
+                return;
+            }
+            
+            // Basic phone validation (can be enhanced)
+            const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+            if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+                formState.phoneValid = false;
+                phoneError.textContent = 'Please enter a valid phone number';
+                phoneError.classList.remove('hidden');
+            } else {
+                formState.phoneValid = true;
+                phoneError.classList.add('hidden');
+            }
+            updateProgress();
+        }
+
+        // Date of Birth validation
+        function validateDateOfBirth() {
+            const dob = document.getElementById('date_of_birth').value;
+            const dobError = document.getElementById('dobError');
+            
+            if (!dob) {
+                formState.dobValid = false;
+                dobError.classList.add('hidden');
+                updateProgress();
+                return;
+            }
+            
+            const birthDate = new Date(dob);
+            const today = new Date();
+            const minAgeDate = new Date();
+            minAgeDate.setFullYear(today.getFullYear() - 13); // Minimum age 13 years
+            
+            if (birthDate > minAgeDate) {
+                formState.dobValid = false;
+                dobError.textContent = 'You must be at least 13 years old to register';
+                dobError.classList.remove('hidden');
+            } else {
+                formState.dobValid = true;
+                dobError.classList.add('hidden');
+            }
+            updateProgress();
+        }
+
+        // Password strength validation
+        function validatePassword() {
+            const password = document.getElementById('password').value;
+            const strengthBar = document.getElementById('passwordStrength');
+            const passwordHelp = document.getElementById('passwordHelp');
+            
+            if (password.length === 0) {
+                formState.passwordValid = false;
+                strengthBar.className = 'password-strength';
+                passwordHelp.textContent = 'Minimum 6 characters';
+                updateProgress();
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = '';
+            
+            // Length check
+            if (password.length >= 6) strength++;
+            if (password.length >= 8) strength++;
+            
+            // Character variety checks
+            if (/[a-z]/.test(password)) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+            
+            // Update strength bar
+            if (strength <= 2) {
+                strengthBar.className = 'password-strength strength-weak';
+                feedback = 'Weak password';
+            } else if (strength <= 4) {
+                strengthBar.className = 'password-strength strength-fair';
+                feedback = 'Fair password';
+            } else if (strength <= 5) {
+                strengthBar.className = 'password-strength strength-good';
+                feedback = 'Good password';
+            } else {
+                strengthBar.className = 'password-strength strength-strong';
+                feedback = 'Strong password';
+            }
+            
+            passwordHelp.textContent = feedback;
+            formState.passwordValid = password.length >= 6;
+            updateProgress();
+            
+            // Also validate confirm password when password changes
+            validateConfirmPassword();
+        }
+
+        // Confirm password validation
+        function validateConfirmPassword() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmError = document.getElementById('confirmPasswordError');
+            
+            if (confirmPassword.length === 0) {
+                formState.confirmPasswordValid = false;
+                confirmError.classList.add('hidden');
+                updateProgress();
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                formState.confirmPasswordValid = false;
+                confirmError.classList.remove('hidden');
+            } else {
+                formState.confirmPasswordValid = true;
+                confirmError.classList.add('hidden');
+            }
+            updateProgress();
+        }
+
+        // Terms validation
+        function validateTerms() {
+            const termsChecked = document.getElementById('agreeTerms').checked;
+            const termsError = document.getElementById('termsError');
+            
+            if (!termsChecked) {
+                formState.termsAccepted = false;
+                termsError.classList.remove('hidden');
+            } else {
+                formState.termsAccepted = true;
+                termsError.classList.add('hidden');
+            }
+            updateProgress();
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const totalFields = 6; // username, phone, dob, password, confirm, terms
+            const completedFields = Object.values(formState).filter(Boolean).length;
+            const progressPercentage = (completedFields / totalFields) * 100;
+            
+            progressBar.style.width = `${progressPercentage}%`;
+            
+            // Update progress text
+            if (completedFields <= 2) {
+                progressText.textContent = 'Step 1 of 3 - Basic Info';
+                progressBar.className = 'bg-red-500 h-2 rounded-full transition-all duration-500';
+            } else if (completedFields <= 4) {
+                progressText.textContent = 'Step 2 of 3 - Security';
+                progressBar.className = 'bg-yellow-500 h-2 rounded-full transition-all duration-500';
+            } else {
+                progressText.textContent = 'Step 3 of 3 - Almost Done';
+                progressBar.className = 'bg-green-500 h-2 rounded-full transition-all duration-500';
+            }
+            
+            // Enable/disable submit button based on form completion
+            const allValid = Object.values(formState).every(Boolean);
+            registerBtn.disabled = !allValid;
+            
+            if (allValid) {
+                registerBtn.classList.remove('opacity-50');
+                registerBtn.classList.add('hover:scale-105');
+            } else {
+                registerBtn.classList.add('opacity-50');
+                registerBtn.classList.remove('hover:scale-105');
+            }
+        }
+
+        // Handle form submission
+        registerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const date_of_birth = document.getElementById('date_of_birth').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+
+            // Hide previous messages
+            hideMessages();
+
+            // Final validation
+            if (password !== confirmPassword) {
+                showError('Passwords do not match!');
+                return;
+            }
+
+            if (!agreeTerms) {
+                showError('You must agree to the terms and conditions');
+                return;
+            }
+
+            // Show loading state
+            setButtonLoading(true);
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        username, 
+                        email, 
+                        phone, 
+                        date_of_birth, 
+                        password 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Show success modal
+                    showSuccessModal();
+                    
+                    // Store token if provided
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                    
+                } else {
+                    throw new Error(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                setButtonLoading(false);
+            }
+        });
+
+        // Success modal functions
+        function showSuccessModal() {
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function redirectToLogin() {
+            window.location.href = '/';
+        }
+
+        function stayOnPage() {
+            document.getElementById('successModal').classList.add('hidden');
+            registerForm.reset();
+            resetFormState();
+        }
+
+        function resetFormState() {
+            formState = {
+                usernameValid: false,
+                phoneValid: false,
+                dobValid: false,
+                passwordValid: false,
+                confirmPasswordValid: false,
+                termsAccepted: false
+            };
+            updateProgress();
+            
+            // Reset strength bar
+            document.getElementById('passwordStrength').className = 'password-strength';
+            document.getElementById('passwordHelp').textContent = 'Minimum 6 characters';
+        }
+
+        // Utility functions
+        function setButtonLoading(loading) {
+            if (loading) {
+                registerBtn.disabled = true;
+                registerBtn.innerHTML = '<div class="loading-spinner mr-2"></div> Creating Account...';
+                registerBtn.classList.remove('hover:scale-105');
+            } else {
+                const allValid = Object.values(formState).every(Boolean);
+                registerBtn.disabled = !allValid;
+                registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> Create Account';
+                if (allValid) {
+                    registerBtn.classList.add('hover:scale-105');
+                }
+            }
+        }
+
+        function showError(message) {
+            errorMessage.classList.remove('hidden');
+            document.getElementById('errorText').textContent = message;
+            
+            // Scroll to error message
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showSuccess(message) {
+            successMessage.classList.remove('hidden');
+            document.getElementById('successText').textContent = message;
+        }
+
+        function hideMessages() {
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+        }
+
+        // Set maximum date for date of birth (13 years ago)
+        function setMaxDateOfBirth() {
+            const today = new Date();
+            const minAgeDate = new Date();
+            minAgeDate.setFullYear(today.getFullYear() - 13);
+            document.getElementById('date_of_birth').max = minAgeDate.toISOString().split('T')[0];
+            
+            // Set a reasonable default (18 years ago)
+            const defaultDob = new Date();
+            defaultDob.setFullYear(today.getFullYear() - 18);
+            document.getElementById('date_of_birth').value = defaultDob.toISOString().split('T')[0];
+            validateDateOfBirth();
+        }
+
+        // Format phone number as user types
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length > 0) {
+                if (!value.startsWith('+')) {
+                    value = '+' + value;
+                }
+            }
+            
+            e.target.value = value;
+        });
+
+        // Initialize form
+        document.addEventListener('DOMContentLoaded', function() {
+            setMaxDateOfBirth();
+            updateProgress();
+            
+            // Check if user is already logged in
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                window.location.href = '/timetable';
+            }
+        });
+
+        // Add input animations
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('ring-2', 'ring-blue-500');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('ring-2', 'ring-blue-500');
+            });
+        });
+
+        // Add character counter for username
+        document.getElementById('username').addEventListener('input', function() {
+            const counter = document.getElementById('usernameCounter') || (function() {
+                const counter = document.createElement('div');
+                counter.id = 'usernameCounter';
+                counter.className = 'text-xs text-gray-500 text-right mt-1';
+                this.parentElement.appendChild(counter);
+                return counter;
+            }).call(this);
+            
+            counter.textContent = `${this.value.length}/20`;
+        });
+    </script>
+</body>
+</html>

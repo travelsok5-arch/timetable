@@ -1,1 +1,2129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Pro - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#8B5CF6',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .task-completed {
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
+        .live-indicator {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .priority-high { border-left: 4px solid #EF4444; }
+        .priority-medium { border-left: 4px solid #F59E0B; }
+        .priority-low { border-left: 4px solid #10B981; }
+        
+        /* Custom scrollbar for modal */
+        .modal-content {
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        
+        /* Responsive modal */
+        @media (max-width: 640px) {
+            .modal-content {
+                max-height: 90vh;
+                margin: 1rem;
+            }
+        }
 
+        .status-open { background-color: #3B82F6; color: white; }
+        .status-in-progress { background-color: #F59E0B; color: white; }
+        .status-resolved { background-color: #10B981; color: white; }
+        .status-closed { background-color: #6B7280; color: white; }
+        
+        /* Chat styles */
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+        }
+        .message-user {
+            background-color: #3B82F6;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            margin-left: auto;
+        }
+        .message-admin {
+            background-color: #E5E7EB;
+            color: #374151;
+            border-radius: 18px 18px 18px 4px;
+            margin-right: auto;
+        }
+        .typing-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #9CA3AF;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-indicator:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* Profile picture styles */
+        .profile-picture {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .profile-picture-preview {
+            border: 3px solid #3B82F6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <!-- Logo and Brand -->
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-clock text-2xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">Timetable Pro</h1>
+                        <p class="text-blue-100 text-sm">Smart Schedule Management</p>
+                    </div>
+                </div>
+
+                <!-- User Info and Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- User Profile -->
+                    <div class="flex items-center space-x-2 bg-blue-500/20 px-3 py-2 rounded-lg">
+                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden profile-picture">
+                            <img id="userProfilePicture" src="" alt="Profile" class="w-full h-full object-cover hidden">
+                            <i id="profilePicturePlaceholder" class="fas fa-user text-sm"></i>
+                        </div>
+                        <div class="hidden md:block">
+                            <div class="text-sm font-medium" id="userName">Loading...</div>
+                            <div class="text-xs text-blue-200" id="userRole">User</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="flex space-x-2">
+                        <button onclick="showProfileSettings()" class="p-2 rounded-lg hover:bg-white/10 transition" title="Profile Settings">
+                            <i class="fas fa-user-cog"></i>
+                        </button>
+                        <button onclick="showSupportModal()" class="p-2 rounded-lg hover:bg-white/10 transition" title="Support">
+                            <i class="fas fa-headset"></i>
+                        </button>
+                        <button onclick="showReportModal()" class="p-2 rounded-lg hover:bg-white/10 transition" title="Reports">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                        <button id="logoutBtn" class="p-2 rounded-lg hover:bg-white/10 transition" title="Logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <!-- Left Sidebar -->
+        <div class="xl:col-span-1 space-y-6">
+            <!-- Quick Stats -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-chart-bar text-blue-500 mr-2"></i>Today's Overview
+                </h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="text-center p-3 bg-blue-50 rounded-lg">
+                        <div class="text-xl font-bold text-blue-600" id="statTotalTasks">0</div>
+                        <div class="text-xs text-gray-600">Total Tasks</div>
+                    </div>
+                    <div class="text-center p-3 bg-green-50 rounded-lg">
+                        <div class="text-xl font-bold text-green-600" id="statCompleted">0</div>
+                        <div class="text-xs text-gray-600">Completed</div>
+                    </div>
+                    <div class="text-center p-3 bg-purple-50 rounded-lg">
+                        <div class="text-xl font-bold text-purple-600" id="statPrayers">5</div>
+                        <div class="text-xs text-gray-600">Prayers</div>
+                    </div>
+                    <div class="text-center p-3 bg-orange-50 rounded-lg">
+                        <div class="text-xl font-bold text-orange-600" id="statRemaining">0h</div>
+                        <div class="text-xs text-gray-600">Remaining</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
+                </h2>
+                <div class="space-y-2">
+                    <button onclick="generateSampleSchedule()" class="w-full text-left p-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition flex items-center">
+                        <i class="fas fa-robot mr-3"></i>
+                        <div>
+                            <div class="font-medium">Auto Schedule</div>
+                            <div class="text-xs text-indigo-600">Generate sample tasks</div>
+                        </div>
+                    </button>
+                    <button onclick="clearCompletedTasks()" class="w-full text-left p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition flex items-center">
+                        <i class="fas fa-check-double mr-3"></i>
+                        <div>
+                            <div class="font-medium">Clear Completed</div>
+                            <div class="text-xs text-green-600">Remove finished tasks</div>
+                        </div>
+                    </button>
+                    <button onclick="exportTodaysData()" class="w-full text-left p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition flex items-center">
+                        <i class="fas fa-file-export mr-3"></i>
+                        <div>
+                            <div class="font-medium">Export Data</div>
+                            <div class="text-xs text-blue-600">Download as CSV</div>
+                        </div>
+                    </button>
+                    <button onclick="showSupportModal()" class="w-full text-left p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition flex items-center">
+                        <i class="fas fa-headset mr-3"></i>
+                        <div>
+                            <div class="font-medium">Get Support</div>
+                            <div class="text-xs text-red-600">Contact support team</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Prayer Times Widget -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-mosque text-purple-500 mr-2"></i>Prayer Times
+                </h2>
+                <div id="prayerWidget" class="space-y-2">
+                    <!-- Prayer times will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="xl:col-span-3 space-y-6">
+            <!-- Add Task Section -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-plus-circle text-green-500 mr-2"></i>
+                        <span id="taskFormTitle">Add New Task</span>
+                    </h2>
+                    <button id="toggleTaskForm" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <form id="taskForm" class="space-y-4">
+                    <input type="hidden" id="editingTaskId">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Task Name *</label>
+                            <input type="text" id="taskName" 
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                placeholder="Enter task name" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                            <input type="date" id="taskDate" 
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
+                            <input type="time" id="startTime" 
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
+                            <input type="time" id="endTime" 
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                            <select id="taskPriority" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="taskDesc" rows="3" 
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Task description (optional)"></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="submit" id="submitTaskBtn" 
+                            class="flex-1 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center">
+                            <i class="fas fa-plus mr-2"></i>Add Task
+                        </button>
+                        <button type="button" onclick="clearTaskForm()" 
+                            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            <i class="fas fa-times mr-2"></i>Clear
+                        </button>
+                        <button type="button" id="cancelEditBtn" onclick="clearTaskForm()" 
+                            class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition hidden">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </button>
+                    </div>
+                </form>
+                <p id="taskError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm hidden"></p>
+            </div>
+
+            <!-- Schedule View -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-3 md:space-y-0">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-calendar-day text-blue-500 mr-2"></i>Today's Schedule
+                    </h2>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full" id="currentDate"></div>
+                        <div class="flex space-x-2">
+                            <button onclick="goToPreviousDay()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button onclick="goToNextDay()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <button onclick="goToToday()" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+                                Today
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schedule Timeline -->
+                <div id="scheduleTimeline" class="space-y-3 max-h-96 overflow-y-auto">
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-clock text-4xl mb-3"></i>
+                        <p>No tasks scheduled for today</p>
+                        <button onclick="generateSampleSchedule()" class="mt-3 text-blue-500 hover:text-blue-700 text-sm">
+                            <i class="fas fa-robot mr-1"></i>Generate sample schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prayer Management -->
+            <div class="glass-card rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-mosque text-purple-500 mr-2"></i>Manage Prayer Times
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Current Prayer Times -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">Current Times</h3>
+                        <div id="prayersList" class="space-y-2">
+                            <!-- Prayer times list will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Edit Prayer Times -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">Update Prayer Time</h3>
+                        <form id="prayerForm" class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Prayer Name</label>
+                                <select id="prayerName" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                    <option value="">Select Prayer</option>
+                                    <option value="Fajr">Fajr</option>
+                                    <option value="Dhuhr">Dhuhr</option>
+                                    <option value="Asr">Asr</option>
+                                    <option value="Maghrib">Maghrib</option>
+                                    <option value="Isha">Isha</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Prayer Time</label>
+                                <input type="time" id="prayerTime" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                            </div>
+                            <button type="submit" 
+                                class="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition font-semibold flex items-center justify-center">
+                                <i class="fas fa-save mr-2"></i>Update Prayer Time
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="glass-card rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <h3 class="text-xl font-semibold text-gray-800">Profile Settings</h3>
+                <button onclick="hideProfileSettings()" class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="modal-content p-6 overflow-y-auto flex-1">
+                <!-- Profile Picture Section -->
+                <div class="text-center mb-4">
+                    <div class="relative inline-block">
+                        <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden mx-auto mb-3 profile-picture-preview">
+                            <img id="profilePicturePreview" src="" alt="Profile Preview" class="w-full h-full object-cover hidden">
+                            <i id="profilePicturePreviewPlaceholder" class="fas fa-user text-gray-400 text-2xl"></i>
+                        </div>
+                        <input type="file" id="profilePictureInput" accept="image/*" class="hidden">
+                        <button type="button" onclick="document.getElementById('profilePictureInput').click()" 
+                                class="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition">
+                            <i class="fas fa-camera text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">Click camera icon to change profile picture</p>
+                </div>
+
+                <form id="profileForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="profileUsername" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="profileEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <input type="tel" id="profilePhone" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                        <input type="date" id="profileDOB" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                        Update Profile
+                    </button>
+                </form>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <h4 class="text-lg font-medium text-gray-800 mb-3">Change Password</h4>
+                    <form id="passwordForm" class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                            <input type="password" id="currentPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                            <input type="password" id="newPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required minlength="6">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                            <input type="password" id="confirmNewPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required minlength="6">
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold">
+                            Change Password
+                        </button>
+                    </form>
+                </div>
+                
+                <div id="profileMessage" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div id="supportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="glass-card rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <h3 class="text-xl font-semibold text-gray-800">Support Center</h3>
+                <button onclick="hideSupportModal()" class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="modal-content p-6 overflow-y-auto flex-1">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- New Ticket Form -->
+                    <div class="lg:col-span-1">
+                        <h4 class="text-lg font-medium text-gray-800 mb-4">Create New Support Ticket</h4>
+                        <form id="supportForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                                <input type="text" id="supportSubject" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Brief description of your issue" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                                <select id="supportPriority" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+                                <textarea id="supportMessage" rows="6" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Please describe your issue in detail..." required></textarea>
+                            </div>
+                            
+                            <button type="submit" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                                <i class="fas fa-paper-plane mr-2"></i>Submit Ticket
+                            </button>
+                        </form>
+                        
+                        <div id="supportMessageAlert" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+
+                        <!-- Support Information -->
+                        <div class="mt-6 space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h5 class="font-semibold text-blue-800 mb-2 flex items-center">
+                                    <i class="fas fa-info-circle mr-2"></i>Support Information
+                                </h5>
+                                <p class="text-sm text-blue-700">
+                                    Our support team typically responds within 24 hours. For urgent issues, please mark your ticket as High priority.
+                                </p>
+                            </div>
+                            
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h5 class="font-semibold text-green-800 mb-2 flex items-center">
+                                    <i class="fas fa-clock mr-2"></i>Response Time
+                                </h5>
+                                <ul class="text-sm text-green-700 space-y-1">
+                                    <li>• High Priority: 2-4 hours</li>
+                                    <li>• Medium Priority: 12-24 hours</li>
+                                    <li>• Low Priority: 24-48 hours</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- My Tickets & Chat Section -->
+                    <div class="lg:col-span-2">
+                        <div class="flex space-x-4 mb-4">
+                            <button id="ticketsTab" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium">My Tickets</button>
+                            <button id="chatTab" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">Live Chat</button>
+                        </div>
+
+                        <!-- Tickets List -->
+                        <div id="ticketsSection" class="space-y-4">
+                            <h4 class="text-lg font-medium text-gray-800 mb-4">My Support Tickets</h4>
+                            <div id="supportTicketsList" class="space-y-3 max-h-96 overflow-y-auto">
+                                <!-- Tickets will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Chat Section -->
+                        <div id="chatSection" class="hidden">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-medium text-gray-800">Live Chat Support</h4>
+                                <div id="chatStatus" class="flex items-center text-sm text-gray-600">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                    <span>Admin Online</span>
+                                </div>
+                            </div>
+
+                            <!-- Chat Container -->
+                            <div class="border rounded-lg">
+                                <!-- Chat Header -->
+                                <div class="bg-gray-50 px-4 py-3 border-b">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h5 class="font-semibold" id="chatTicketSubject">Select a ticket to start chatting</h5>
+                                            <p class="text-sm text-gray-600" id="chatTicketInfo"></p>
+                                        </div>
+                                        <div id="chatTicketStatus" class="hidden">
+                                            <span class="px-2 py-1 text-xs rounded-full status-open">Open</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Messages Container -->
+                                <div id="chatMessages" class="chat-container p-4 space-y-3 bg-gray-50">
+                                    <div class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-comments text-3xl mb-2"></i>
+                                        <p>Select a support ticket to view messages</p>
+                                    </div>
+                                </div>
+
+                                <!-- Message Input -->
+                                <div class="p-4 border-t bg-white">
+                                    <div class="flex space-x-2">
+                                        <input type="text" id="chatMessageInput" 
+                                            placeholder="Type your message..." 
+                                            class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            disabled>
+                                        <button id="sendMessageBtn" 
+                                            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            disabled>
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                    <div id="typingIndicator" class="hidden mt-2 text-sm text-gray-500">
+                                        <div class="flex items-center">
+                                            <span class="mr-2">Admin is typing</span>
+                                            <div class="typing-indicator"></div>
+                                            <div class="typing-indicator"></div>
+                                            <div class="typing-indicator"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="glass-card rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <h3 class="text-xl font-semibold text-gray-800">Reports & Analytics</h3>
+                <button onclick="hideReportModal()" class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="modal-content p-6 overflow-y-auto flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="text-center p-6 bg-blue-50 rounded-lg">
+                        <i class="fas fa-calendar-week text-blue-500 text-3xl mb-3"></i>
+                        <h4 class="font-semibold text-blue-800 mb-2">Weekly Report</h4>
+                        <p class="text-sm text-blue-600 mb-3">Generate weekly task completion report</p>
+                        <button onclick="generateWeeklyReport()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                            Generate Report
+                        </button>
+                    </div>
+                    
+                    <div class="text-center p-6 bg-green-50 rounded-lg">
+                        <i class="fas fa-chart-pie text-green-500 text-3xl mb-3"></i>
+                        <h4 class="font-semibold text-green-800 mb-2">Productivity Analytics</h4>
+                        <p class="text-sm text-green-600 mb-3">View your productivity trends</p>
+                        <button onclick="showProductivityAnalytics()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">
+                            View Analytics
+                        </button>
+                    </div>
+                    
+                    <div class="text-center p-6 bg-purple-50 rounded-lg">
+                        <i class="fas fa-file-export text-purple-500 text-3xl mb-3"></i>
+                        <h4 class="font-semibold text-purple-800 mb-2">Export Data</h4>
+                        <p class="text-sm text-purple-600 mb-3">Export your data in various formats</p>
+                        <button onclick="showExportOptions()" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 text-sm">
+                            Export Options
+                        </button>
+                    </div>
+                    
+                    <div class="text-center p-6 bg-orange-50 rounded-lg">
+                        <i class="fas fa-tasks text-orange-500 text-3xl mb-3"></i>
+                        <h4 class="font-semibold text-orange-800 mb-2">Task Statistics</h4>
+                        <p class="text-sm text-orange-600 mb-3">Detailed task completion statistics</p>
+                        <button onclick="showTaskStatistics()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 text-sm">
+                            View Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-sign-out-alt text-red-500 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Confirm Logout</h3>
+                <p class="text-gray-600 mb-6">Are you sure you want to logout from Timetable Pro?</p>
+                <div class="flex space-x-3">
+                    <button onclick="handleLogout()" class="flex-1 bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition font-semibold">
+                        Yes, Logout
+                    </button>
+                    <button onclick="hideLogoutModal()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notification" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden z-50 max-w-sm transition-all duration-300"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 flex items-center space-x-3">
+            <div class="loading-spinner"></div>
+            <span class="text-gray-700">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentUser = null;
+        let prayers = {};
+        let tasks = [];
+        let supportTickets = [];
+        let currentDate = new Date().toISOString().split('T')[0];
+        let editingTaskId = null;
+        let currentChatTicketId = null;
+        let chatRefreshInterval = null;
+
+        // DOM Content Loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+            initializeApp();
+            setupEventListeners();
+            setupProfilePictureUpload();
+            loadData();
+        });
+
+        // Enhanced Authentication check with immediate redirect
+        function checkAuthentication() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+            
+            // Verify token and load user data
+            fetch('/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Invalid token');
+                }
+                return response.json();
+            })
+            .then(data => {
+                currentUser = data.user;
+                updateUserInterface();
+            })
+            .catch(error => {
+                console.error('Auth error:', error);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
+                localStorage.removeItem('rememberMe');
+                window.location.href = '/';
+            });
+        }
+
+        function updateUserInterface() {
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.username;
+                document.getElementById('userRole').textContent = currentUser.role || 'User';
+                
+                // Set current date
+                document.getElementById('taskDate').value = currentDate;
+                document.getElementById('currentDate').textContent = formatDateDisplay(currentDate);
+                
+                // Load profile picture
+                loadUserProfilePicture();
+            }
+        }
+
+        function initializeApp() {
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function setupEventListeners() {
+            // Task form
+            document.getElementById('taskForm').addEventListener('submit', handleTaskSubmit);
+            
+            // Prayer form
+            document.getElementById('prayerForm').addEventListener('submit', handlePrayerSubmit);
+            
+            // Profile forms
+            document.getElementById('profileForm').addEventListener('submit', handleProfileUpdate);
+            document.getElementById('passwordForm').addEventListener('submit', handlePasswordChange);
+            
+            // Support form
+            document.getElementById('supportForm').addEventListener('submit', handleSupportSubmit);
+            
+            // Chat functionality
+            document.getElementById('sendMessageBtn').addEventListener('click', sendChatMessage);
+            document.getElementById('chatMessageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+            
+            // Tab switching
+            document.getElementById('ticketsTab').addEventListener('click', () => switchSupportTab('tickets'));
+            document.getElementById('chatTab').addEventListener('click', () => switchSupportTab('chat'));
+            
+            // Navigation buttons
+            document.getElementById('toggleTaskForm').addEventListener('click', toggleTaskForm);
+            document.getElementById('logoutBtn').addEventListener('click', showLogoutModal);
+        }
+
+        // Profile Picture Functions
+        function setupProfilePictureUpload() {
+            const fileInput = document.getElementById('profilePictureInput');
+            
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file type
+                    if (!file.type.startsWith('image/')) {
+                        showNotification('Please select a valid image file', 'error');
+                        return;
+                    }
+                    
+                    // Validate file size (max 2MB)
+                    if (file.size > 2 * 1024 * 1024) {
+                        showNotification('Image size should be less than 2MB', 'error');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imageData = e.target.result;
+                        
+                        // Update preview
+                        const previewImg = document.getElementById('profilePicturePreview');
+                        const previewPlaceholder = document.getElementById('profilePicturePreviewPlaceholder');
+                        previewImg.src = imageData;
+                        previewImg.classList.remove('hidden');
+                        previewPlaceholder.classList.add('hidden');
+                        
+                        // Upload to server
+                        uploadProfilePicture(imageData);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Load user profile picture
+        async function loadUserProfilePicture() {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/profile/picture', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.profilePicture) {
+                        // Update profile picture in navigation
+                        const profileImg = document.getElementById('userProfilePicture');
+                        const placeholder = document.getElementById('profilePicturePlaceholder');
+                        profileImg.src = data.profilePicture;
+                        profileImg.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                        
+                        // Update profile picture in settings modal preview
+                        const previewImg = document.getElementById('profilePicturePreview');
+                        const previewPlaceholder = document.getElementById('profilePicturePreviewPlaceholder');
+                        previewImg.src = data.profilePicture;
+                        previewImg.classList.remove('hidden');
+                        previewPlaceholder.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile picture:', error);
+            }
+        }
+
+        // Upload profile picture to server
+        async function uploadProfilePicture(imageData) {
+            const token = localStorage.getItem('authToken');
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/profile/picture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ imageData })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showNotification('Profile picture updated successfully!', 'success');
+                    
+                    // Update profile picture in navigation
+                    const profileImg = document.getElementById('userProfilePicture');
+                    const placeholder = document.getElementById('profilePicturePlaceholder');
+                    profileImg.src = imageData;
+                    profileImg.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    throw new Error('Failed to upload profile picture');
+                }
+            } catch (error) {
+                console.error('Error uploading profile picture:', error);
+                showNotification('Error updating profile picture: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadData() {
+            showLoading();
+            try {
+                await Promise.all([
+                    loadPrayers(),
+                    loadTasks(),
+                    loadDashboardStats(),
+                    loadSupportTickets()
+                ]);
+            } catch (error) {
+                showNotification('Error loading data: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadPrayers() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/prayers', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load prayers');
+            
+            const prayersData = await response.json();
+            prayers = {};
+            prayersData.forEach(p => prayers[p.name] = p.time);
+            
+            renderPrayersList();
+            renderPrayerWidget();
+        }
+
+        async function loadTasks() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/tasks?date=${currentDate}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load tasks');
+            
+            tasks = await response.json();
+            renderScheduleTimeline();
+        }
+
+        async function loadSupportTickets() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/support/tickets', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                supportTickets = await response.json();
+                renderSupportTickets();
+            }
+        }
+
+        async function loadDashboardStats() {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/dashboard/stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const stats = await response.json();
+                updateDashboardStats(stats);
+            }
+        }
+
+        function renderPrayersList() {
+            const list = document.getElementById('prayersList');
+            list.innerHTML = '';
+            
+            const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+            
+            prayerOrder.forEach(name => {
+                if (prayers[name]) {
+                    const isCurrent = isPrayerTimeCurrent(prayers[name]);
+                    const prayerClass = isCurrent ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200';
+                    
+                    list.innerHTML += `
+                        <div class="flex justify-between items-center p-3 border rounded-lg ${prayerClass}">
+                            <div class="flex items-center">
+                                <i class="fas fa-mosque text-purple-500 mr-3"></i>
+                                <div>
+                                    <div class="font-medium">${name}</div>
+                                    <div class="text-sm text-gray-600">${formatTimeForDisplay(prayers[name])}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                ${isCurrent ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full live-indicator">Now</span>' : ''}
+                                <button onclick="deletePrayer('${name}')" class="text-red-500 hover:text-red-700 p-1 rounded" title="Delete prayer time">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function renderPrayerWidget() {
+            const widget = document.getElementById('prayerWidget');
+            widget.innerHTML = '';
+            
+            const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5);
+            
+            prayerOrder.forEach(name => {
+                if (prayers[name]) {
+                    const prayerTime = prayers[name];
+                    const isNext = prayerTime > currentTime;
+                    const isCurrent = prayerTime === currentTime;
+                    
+                    widget.innerHTML += `
+                        <div class="flex justify-between items-center p-2 ${isCurrent ? 'bg-green-100 rounded' : ''}">
+                            <span class="font-medium ${isNext ? 'text-blue-600' : 'text-gray-600'}">${name}</span>
+                            <span class="text-sm ${isCurrent ? 'font-bold text-green-700' : 'text-gray-500'}">${formatTimeForDisplay(prayerTime)}</span>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function renderScheduleTimeline() {
+            const timeline = document.getElementById('scheduleTimeline');
+            
+            if (tasks.length === 0 && Object.keys(prayers).length === 0) {
+                timeline.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-clock text-4xl mb-3"></i>
+                        <p>No tasks scheduled for today</p>
+                        <button onclick="generateSampleSchedule()" class="mt-3 text-blue-500 hover:text-blue-700 text-sm">
+                            <i class="fas fa-robot mr-1"></i>Generate sample schedule
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Combine tasks and prayers for timeline
+            const allItems = [
+                ...tasks.map(t => ({ ...t, type: 'task' })),
+                ...Object.entries(prayers).map(([name, time]) => ({ 
+                    name: `${name} Prayer`, 
+                    time, 
+                    start_time: time,
+                    end_time: addMinutes(time, 15),
+                    type: 'prayer',
+                    description: 'Prayer Time',
+                    fixed: true
+                }))
+            ];
+            
+            // Sort by start time
+            allItems.sort((a, b) => (a.start_time || a.time).localeCompare(b.start_time || b.time));
+            
+            timeline.innerHTML = '';
+            
+            allItems.forEach(item => {
+                const isTask = item.type === 'task';
+                const isCompleted = isTask && item.completed;
+                const isCurrent = isTimeCurrent(item.start_time || item.time, item.end_time);
+                const priorityClass = isTask ? `priority-${item.priority || 'medium'}` : '';
+                
+                const colorClass = isTask ? 
+                    (isCompleted ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200') : 
+                    'bg-purple-50 border-purple-200';
+                
+                const highlightClass = isCurrent ? 'ring-2 ring-yellow-400 shadow-md' : '';
+                
+                timeline.innerHTML += `
+                    <div class="p-4 border rounded-lg ${colorClass} ${highlightClass} ${priorityClass} transition-all duration-300">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    ${isTask ? 
+                                        `<i class="fas ${isCompleted ? 'fa-check-circle text-green-500' : 'fa-tasks text-blue-500'} mr-2"></i>` :
+                                        `<i class="fas fa-mosque text-purple-500 mr-2"></i>`
+                                    }
+                                    <strong class="${isCompleted ? 'line-through text-gray-500' : ''}">${item.name}</strong>
+                                    ${isCurrent ? '<span class="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full animate-pulse">Live Now</span>' : ''}
+                                    ${item.fixed ? '<span class="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Fixed Time</span>' : ''}
+                                    ${isTask ? `<span class="ml-2 px-2 py-1 ${getPriorityBadgeClass(item.priority)} text-xs rounded-full">${item.priority}</span>` : ''}
+                                </div>
+                                <div class="text-sm text-gray-600 ml-6">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    ${formatTimeForDisplay(item.start_time || item.time)} - ${formatTimeForDisplay(item.end_time || addMinutes(item.time, 15))}
+                                    ${item.description ? ` • ${item.description}` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-4">
+                                ${isTask && !isCompleted ? `
+                                    <button onclick="completeTask(${item.id})" class="text-green-500 hover:text-green-700 p-2 rounded-lg hover:bg-green-100" title="Mark as completed">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                ` : ''}
+                                ${isTask ? `
+                                    <button onclick="editTask(${item.id})" class="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-100" title="Edit task">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteTask(${item.id})" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-100" title="Delete task">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderSupportTickets() {
+            const container = document.getElementById('supportTicketsList');
+            container.innerHTML = '';
+            
+            if (supportTickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-ticket-alt text-4xl mb-3"></i>
+                        <p>No support tickets yet</p>
+                        <p class="text-sm">Create your first ticket above</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            supportTickets.forEach(ticket => {
+                const statusClass = `status-${ticket.status}`;
+                const priorityClass = getPriorityBadgeClass(ticket.priority);
+                
+                container.innerHTML += `
+                    <div class="border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer" onclick="openChat(${ticket.id})">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h5 class="font-semibold text-gray-800">${ticket.subject}</h5>
+                                <p class="text-sm text-gray-600 mt-1">${ticket.message.substring(0, 100)}${ticket.message.length > 100 ? '...' : ''}</p>
+                            </div>
+                            <div class="flex flex-col items-end space-y-1 ml-4">
+                                <span class="px-2 py-1 ${statusClass} text-xs rounded-full">${ticket.status}</span>
+                                <span class="px-2 py-1 ${priorityClass} text-xs rounded-full">${ticket.priority}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500">
+                            <span>Created: ${new Date(ticket.created_at).toLocaleDateString()}</span>
+                            <span>Ticket #${ticket.id}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function switchSupportTab(tab) {
+            const ticketsTab = document.getElementById('ticketsTab');
+            const chatTab = document.getElementById('chatTab');
+            const ticketsSection = document.getElementById('ticketsSection');
+            const chatSection = document.getElementById('chatSection');
+            
+            if (tab === 'tickets') {
+                ticketsTab.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg font-medium';
+                chatTab.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium';
+                ticketsSection.classList.remove('hidden');
+                chatSection.classList.add('hidden');
+            } else {
+                ticketsTab.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium';
+                chatTab.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg font-medium';
+                ticketsSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+            }
+        }
+
+        async function openChat(ticketId) {
+            currentChatTicketId = ticketId;
+            const ticket = supportTickets.find(t => t.id === ticketId);
+            
+            if (!ticket) return;
+            
+            // Update chat header
+            document.getElementById('chatTicketSubject').textContent = ticket.subject;
+            document.getElementById('chatTicketInfo').textContent = `Ticket #${ticket.id} • ${ticket.status}`;
+            document.getElementById('chatTicketStatus').innerHTML = `<span class="px-2 py-1 text-xs rounded-full status-${ticket.status}">${ticket.status}</span>`;
+            document.getElementById('chatTicketStatus').classList.remove('hidden');
+            
+            // Enable chat input
+            document.getElementById('chatMessageInput').disabled = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+            
+            // Switch to chat tab
+            switchSupportTab('chat');
+            
+            // Load messages
+            await loadChatMessages(ticketId);
+            
+            // Start auto-refresh
+            startChatAutoRefresh();
+        }
+
+        async function loadChatMessages(ticketId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const messages = await response.json();
+                    renderChatMessages(messages);
+                }
+            } catch (error) {
+                console.error('Error loading chat messages:', error);
+            }
+        }
+
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-comments text-3xl mb-2"></i>
+                        <p>No messages yet</p>
+                        <p class="text-sm">Start the conversation</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messages.forEach(message => {
+                const isUser = message.user_id === currentUser.id;
+                const messageClass = isUser ? 'message-user' : 'message-admin';
+                const time = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                container.innerHTML += `
+                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-xs lg:max-w-md">
+                            <div class="${messageClass} px-4 py-2">
+                                <p class="text-sm">${message.message}</p>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}">
+                                ${time} • ${message.username} ${message.role === 'admin' ? '(Admin)' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const messageInput = document.getElementById('chatMessageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || !currentChatTicketId) return;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/support/tickets/${currentChatTicketId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (response.ok) {
+                    messageInput.value = '';
+                    await loadChatMessages(currentChatTicketId);
+                } else {
+                    throw new Error('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showNotification('Failed to send message', 'error');
+            }
+        }
+
+        function startChatAutoRefresh() {
+            // Clear existing interval
+            if (chatRefreshInterval) {
+                clearInterval(chatRefreshInterval);
+            }
+            
+            // Refresh messages every 5 seconds
+            chatRefreshInterval = setInterval(async () => {
+                if (currentChatTicketId) {
+                    await loadChatMessages(currentChatTicketId);
+                }
+            }, 5000);
+        }
+
+        function stopChatAutoRefresh() {
+            if (chatRefreshInterval) {
+                clearInterval(chatRefreshInterval);
+                chatRefreshInterval = null;
+            }
+        }
+
+        // Event Handlers
+        async function handleTaskSubmit(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('taskName').value;
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            const desc = document.getElementById('taskDesc').value;
+            const date = document.getElementById('taskDate').value;
+            const priority = document.getElementById('taskPriority').value;
+            
+            // Validation
+            if (start >= end) {
+                showTaskError('End time must be after start time!');
+                return;
+            }
+            
+            hideTaskError();
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                let response;
+                if (editingTaskId) {
+                    // Update existing task
+                    response = await fetch(`/api/tasks/${editingTaskId}`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ 
+                            name, 
+                            start_time: start, 
+                            end_time: end, 
+                            description: desc, 
+                            date,
+                            priority
+                        })
+                    });
+                } else {
+                    // Create new task
+                    response = await fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ 
+                            name, 
+                            start_time: start, 
+                            end_time: end, 
+                            description: desc, 
+                            date,
+                            priority
+                        })
+                    });
+                }
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to save task');
+                }
+                
+                showNotification(editingTaskId ? 'Task updated successfully!' : 'Task added successfully!', 'success');
+                loadData();
+                clearTaskForm();
+                
+            } catch (error) {
+                showNotification('Error saving task: ' + error.message, 'error');
+            }
+        }
+
+        async function handlePrayerSubmit(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('prayerName').value;
+            const time = document.getElementById('prayerTime').value;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/prayers', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, time })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save prayer time');
+                
+                showNotification('Prayer time updated successfully!', 'success');
+                loadData();
+                e.target.reset();
+                
+            } catch (error) {
+                showNotification('Error saving prayer time: ' + error.message, 'error');
+            }
+        }
+
+        async function handleSupportSubmit(e) {
+            e.preventDefault();
+            
+            const subject = document.getElementById('supportSubject').value;
+            const message = document.getElementById('supportMessage').value;
+            const priority = document.getElementById('supportPriority').value;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/support/tickets', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ subject, message, priority })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to create support ticket');
+                }
+                
+                showNotification('Support ticket created successfully!', 'success');
+                document.getElementById('supportForm').reset();
+                loadSupportTickets();
+                
+            } catch (error) {
+                document.getElementById('supportMessageAlert').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('supportMessageAlert').textContent = 'Error creating ticket: ' + error.message;
+                document.getElementById('supportMessageAlert').classList.remove('hidden');
+            }
+        }
+
+        // Profile Functions
+        function showProfileSettings() {
+            // Populate profile form with current user data
+            document.getElementById('profileUsername').value = currentUser.username;
+            document.getElementById('profileEmail').value = currentUser.email || '';
+            document.getElementById('profilePhone').value = currentUser.phone || '';
+            document.getElementById('profileDOB').value = currentUser.date_of_birth || '';
+            
+            // Load current profile picture for preview
+            loadUserProfilePicture();
+            
+            document.getElementById('profileModal').classList.remove('hidden');
+            document.getElementById('profileMessage').classList.add('hidden');
+        }
+
+        function hideProfileSettings() {
+            document.getElementById('profileModal').classList.add('hidden');
+            document.getElementById('profileMessage').classList.add('hidden');
+        }
+
+        async function handleProfileUpdate(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('profileEmail').value;
+            const phone = document.getElementById('profilePhone').value;
+            const date_of_birth = document.getElementById('profileDOB').value;
+
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email, phone, date_of_birth })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update profile');
+                }
+
+                const result = await response.json();
+                
+                // Update current user data locally
+                currentUser.email = email;
+                currentUser.phone = phone;
+                currentUser.date_of_birth = date_of_birth;
+                
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'Profile updated successfully!';
+                document.getElementById('profileMessage').classList.remove('hidden');
+                
+                showNotification('Profile updated successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Profile update error:', error);
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'Error updating profile: ' + error.message;
+                document.getElementById('profileMessage').classList.remove('hidden');
+            }
+        }
+
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+            // Validation
+            if (newPassword !== confirmPassword) {
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'New password and confirm password do not match!';
+                document.getElementById('profileMessage').classList.remove('hidden');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'New password must be at least 6 characters long!';
+                document.getElementById('profileMessage').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/profile/change-password', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to change password');
+                }
+
+                const result = await response.json();
+                
+                // Clear password form
+                document.getElementById('passwordForm').reset();
+                
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'Password changed successfully!';
+                document.getElementById('profileMessage').classList.remove('hidden');
+                
+                showNotification('Password changed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Password change error:', error);
+                document.getElementById('profileMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('profileMessage').textContent = 'Error changing password: ' + error.message;
+                document.getElementById('profileMessage').classList.remove('hidden');
+            }
+        }
+
+        // Support Functions
+        function showSupportModal() {
+            document.getElementById('supportModal').classList.remove('hidden');
+            document.getElementById('supportMessageAlert').classList.add('hidden');
+            loadSupportTickets();
+            switchSupportTab('tickets');
+            stopChatAutoRefresh();
+        }
+
+        function hideSupportModal() {
+            document.getElementById('supportModal').classList.add('hidden');
+            stopChatAutoRefresh();
+            currentChatTicketId = null;
+        }
+
+        function showReportModal() {
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function hideReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+        }
+
+        // Task Management Functions
+        async function completeTask(id) {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ completed: true })
+                });
+                
+                if (!response.ok) throw new Error('Failed to complete task');
+                
+                showNotification('Task marked as completed!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification('Error completing task: ' + error.message, 'error');
+            }
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            
+            // Populate form with task data
+            document.getElementById('editingTaskId').value = task.id;
+            document.getElementById('taskName').value = task.name;
+            document.getElementById('taskDate').value = task.date;
+            document.getElementById('startTime').value = task.start_time;
+            document.getElementById('endTime').value = task.end_time;
+            document.getElementById('taskDesc').value = task.description || '';
+            document.getElementById('taskPriority').value = task.priority || 'medium';
+            
+            // Change form to update mode
+            document.getElementById('taskFormTitle').textContent = 'Edit Task';
+            document.getElementById('submitTaskBtn').innerHTML = '<i class="fas fa-save mr-2"></i>Update Task';
+            document.getElementById('submitTaskBtn').classList.remove('bg-green-500', 'hover:bg-green-600');
+            document.getElementById('submitTaskBtn').classList.add('bg-blue-500', 'hover:bg-blue-600');
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            
+            editingTaskId = id;
+            
+            // Scroll to form
+            document.getElementById('taskForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteTask(id) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/tasks/${id}`, { 
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to delete task');
+                
+                showNotification('Task deleted successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification('Error deleting task: ' + error.message, 'error');
+            }
+        }
+
+        async function deletePrayer(name) {
+            if (!confirm('Are you sure you want to delete this prayer time?')) return;
+            
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/prayers/${name}`, { 
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to delete prayer time');
+                
+                showNotification('Prayer time deleted successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification('Error deleting prayer time: ' + error.message, 'error');
+            }
+        }
+
+        // Utility Functions
+        function formatTimeForDisplay(time) {
+            if (!time) return '';
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        function formatDateDisplay(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function addMinutes(time, minutes) {
+            const [hours, mins] = time.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, mins + minutes, 0, 0);
+            return date.toTimeString().slice(0, 5);
+        }
+
+        function isTimeCurrent(startTime, endTime) {
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5);
+            return currentTime >= startTime && currentTime <= endTime;
+        }
+
+        function isPrayerTimeCurrent(prayerTime) {
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5);
+            return currentTime === prayerTime;
+        }
+
+        function getPriorityBadgeClass(priority) {
+            switch (priority) {
+                case 'high': return 'bg-red-100 text-red-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'low': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function clearTaskForm() {
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskDate').value = currentDate;
+            document.getElementById('editingTaskId').value = '';
+            document.getElementById('taskFormTitle').textContent = 'Add New Task';
+            document.getElementById('submitTaskBtn').innerHTML = '<i class="fas fa-plus mr-2"></i>Add Task';
+            document.getElementById('submitTaskBtn').classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            document.getElementById('submitTaskBtn').classList.add('bg-green-500', 'hover:bg-green-600');
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            editingTaskId = null;
+            hideTaskError();
+        }
+
+        function toggleTaskForm() {
+            const form = document.getElementById('taskForm');
+            const icon = document.getElementById('toggleTaskForm').querySelector('i');
+            
+            if (form.classList.contains('hidden')) {
+                form.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                form.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // Navigation Functions
+        function goToToday() {
+            currentDate = new Date().toISOString().split('T')[0];
+            updateDateDisplay();
+            loadData();
+        }
+
+        function goToPreviousDay() {
+            const date = new Date(currentDate);
+            date.setDate(date.getDate() - 1);
+            currentDate = date.toISOString().split('T')[0];
+            updateDateDisplay();
+            loadData();
+        }
+
+        function goToNextDay() {
+            const date = new Date(currentDate);
+            date.setDate(date.getDate() + 1);
+            currentDate = date.toISOString().split('T')[0];
+            updateDateDisplay();
+            loadData();
+        }
+
+        function updateDateDisplay() {
+            document.getElementById('currentDate').textContent = formatDateDisplay(currentDate);
+            document.getElementById('taskDate').value = currentDate;
+        }
+
+        // Sample Data Generation
+        async function generateSampleSchedule() {
+            const sampleTasks = [
+                { name: 'Morning Exercise', start: '07:00', end: '08:00', desc: 'Yoga and meditation', priority: 'medium' },
+                { name: 'Work Session', start: '09:00', end: '12:00', desc: 'Important project work', priority: 'high' },
+                { name: 'Lunch Break', start: '13:00', end: '14:00', desc: 'Healthy meal', priority: 'low' },
+                { name: 'Study Time', start: '15:00', end: '17:00', desc: 'Learning new skills', priority: 'medium' },
+                { name: 'Family Time', start: '19:00', end: '20:00', desc: 'Spend time with family', priority: 'high' }
+            ];
+            
+            const token = localStorage.getItem('authToken');
+            showLoading();
+            
+            try {
+                for (const task of sampleTasks) {
+                    await fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            ...task,
+                            date: currentDate
+                        })
+                    });
+                }
+                
+                showNotification('Sample schedule generated successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification('Error generating sample schedule: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function clearCompletedTasks() {
+            const completedTasks = tasks.filter(t => t.completed);
+            if (completedTasks.length === 0) {
+                showNotification('No completed tasks to clear!', 'info');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${completedTasks.length} completed tasks?`)) return;
+            
+            const token = localStorage.getItem('authToken');
+            showLoading();
+            
+            try {
+                for (const task of completedTasks) {
+                    await fetch(`/api/tasks/${task.id}`, { 
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                }
+                
+                showNotification(`${completedTasks.length} completed tasks cleared!`, 'success');
+                loadData();
+            } catch (error) {
+                showNotification('Error clearing completed tasks: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function exportTodaysData() {
+            const csvContent = generateCSVFromTasks(tasks);
+            downloadCSV(csvContent, `timetable_${currentDate}.csv`);
+            showNotification('Today\'s data exported successfully!', 'success');
+        }
+
+        // Dashboard Functions
+        function updateDashboardStats(stats) {
+            document.getElementById('statTotalTasks').textContent = stats.totalTasks || 0;
+            document.getElementById('statCompleted').textContent = stats.completedTasks || 0;
+            document.getElementById('statPrayers').textContent = stats.prayerCount || 5;
+            
+            // Calculate remaining time
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5);
+            const remainingTasks = tasks.filter(t => !t.completed && t.start_time > currentTime);
+            
+            if (remainingTasks.length > 0) {
+                const nextTask = remainingTasks[0];
+                const [nextHour, nextMinute] = nextTask.start_time.split(':').map(Number);
+                const nextTime = new Date();
+                nextTime.setHours(nextHour, nextMinute, 0, 0);
+                
+                const diffMs = nextTime - now;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                
+                document.getElementById('statRemaining').textContent = `${diffHours}h ${diffMinutes}m`;
+            } else {
+                document.getElementById('statRemaining').textContent = '0h';
+            }
+        }
+
+        // Report Functions
+        function generateWeeklyReport() {
+            showNotification('Weekly report generation started!', 'info');
+            // Implementation for weekly report
+        }
+
+        function showProductivityAnalytics() {
+            showNotification('Productivity analytics loaded!', 'info');
+            // Implementation for analytics
+        }
+
+        function showExportOptions() {
+            showNotification('Export options displayed!', 'info');
+            // Implementation for export options
+        }
+
+        function showTaskStatistics() {
+            showNotification('Task statistics loaded!', 'info');
+            // Implementation for task statistics
+        }
+
+        // Logout Functions
+        function showLogoutModal() {
+            document.getElementById('logoutModal').classList.remove('hidden');
+        }
+
+        function hideLogoutModal() {
+            document.getElementById('logoutModal').classList.add('hidden');
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('authToken');
+            
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
+                localStorage.removeItem('rememberMe');
+                window.location.href = '/';
+            }
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info', duration = 5000) {
+            const notification = document.getElementById('notification');
+            const typeClasses = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm ${typeClasses[type]}`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${getNotificationIcon(type)} mr-3"></i>
+                    <div class="flex-1">${message}</div>
+                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="ml-2">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, duration);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-triangle',
+                warning: 'exclamation-circle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+
+        function showTaskError(message) {
+            const errorEl = document.getElementById('taskError');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function hideTaskError() {
+            document.getElementById('taskError').classList.add('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        // Auto-check for reminders every minute
+        setInterval(() => {
+            checkReminders();
+            updateLiveIndicators();
+        }, 60000);
+
+        function checkReminders() {
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5);
+            
+            // Check task reminders
+            tasks.forEach(task => {
+                if (task.start_time === currentTime && !task.completed) {
+                    showReminder(`Task Reminder: ${task.name}`, task.description || 'No description');
+                }
+            });
+            
+            // Check prayer reminders
+            Object.entries(prayers).forEach(([name, time]) => {
+                if (time === currentTime) {
+                    showReminder(`Prayer Time: ${name}`, 'Time for Namaz');
+                }
+            });
+        }
+
+        function showReminder(title, body) {
+            // Browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, { body, icon: '/favicon.ico' });
+            }
+            
+            // In-app notification
+            showNotification(`${title}: ${body}`, 'warning', 10000);
+        }
+
+        function updateLiveIndicators() {
+            // This will trigger a re-render of components that show live status
+            renderPrayersList();
+            renderScheduleTimeline();
+        }
+
+        // Export/Report Functions
+        function generateCSVFromTasks(taskList) {
+            const headers = ['Date', 'Task Name', 'Start Time', 'End Time', 'Description', 'Priority', 'Status'];
+            const rows = taskList.map(task => [
+                task.date,
+                task.name,
+                task.start_time,
+                task.end_time,
+                task.description || '',
+                task.priority || 'medium',
+                task.completed ? 'Completed' : 'Pending'
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(',')
+            ).join('\n');
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Make functions globally available for onclick handlers
+        window.generateSampleSchedule = generateSampleSchedule;
+        window.completeTask = completeTask;
+        window.editTask = editTask;
+        window.deleteTask = deleteTask;
+        window.deletePrayer = deletePrayer;
+        window.clearCompletedTasks = clearCompletedTasks;
+        window.exportTodaysData = exportTodaysData;
+        window.goToToday = goToToday;
+        window.goToPreviousDay = goToPreviousDay;
+        window.goToNextDay = goToNextDay;
+        window.clearTaskForm = clearTaskForm;
+        window.showProfileSettings = showProfileSettings;
+        window.hideProfileSettings = hideProfileSettings;
+        window.showSupportModal = showSupportModal;
+        window.hideSupportModal = hideSupportModal;
+        window.showReportModal = showReportModal;
+        window.hideReportModal = hideReportModal;
+        window.showLogoutModal = showLogoutModal;
+        window.hideLogoutModal = hideLogoutModal;
+        window.handleLogout = handleLogout;
+        window.generateWeeklyReport = generateWeeklyReport;
+        window.showProductivityAnalytics = showProductivityAnalytics;
+        window.showExportOptions = showExportOptions;
+        window.showTaskStatistics = showTaskStatistics;
+        window.openChat = openChat;
+        window.sendChatMessage = sendChatMessage;
+
+        // Security: Prevent direct access to timetable without login
+        window.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

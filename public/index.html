@@ -1,1 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Timetable Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            margin-top: 4px;
+            transition: all 0.3s ease;
+        }
+        .strength-weak { background-color: #ef4444; width: 25%; }
+        .strength-fair { background-color: #f59e0b; width: 50%; }
+        .strength-good { background-color: #10b981; width: 75%; }
+        .strength-strong { background-color: #059669; width: 100%; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-center text-white">
+            <i class="fas fa-clock text-4xl mb-3"></i>
+            <h1 class="text-3xl font-bold">Timetable Pro</h1>
+            <p class="text-blue-100 mt-2">Professional Schedule Management</p>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="p-8">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Welcome Back</h2>
+            <p class="text-gray-600 text-center mb-6">Sign in to your account</p>
+            
+            <form id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" id="username" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="Enter your username" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="password" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            placeholder="Enter your password" required>
+                        <button type="button" id="togglePassword" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="rememberMe" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                    </label>
+                    <button type="button" id="forgotPasswordBtn" class="text-sm text-blue-600 hover:text-blue-500">
+                        Forgot password?
+                    </button>
+                </div>
+                
+                <button type="submit" id="loginBtn" 
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    <span>Sign In</span>
+                </button>
+            </form>
+            
+            <!-- Error Message -->
+            <div id="errorMessage" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm hidden">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="errorText"></span>
+            </div>
+            
+            <!-- Success Message -->
+            <div id="successMessage" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm hidden">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span id="successText"></span>
+            </div>
+            
+            <!-- Register Link -->
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">Don't have an account?</p>
+                <a href="/register" class="text-blue-600 hover:text-blue-500 font-semibold">Create account</a>
+            </div>
+        </div>
+    </div>
 
+    <!-- Forgot Password Modal - Step 1: Verify User -->
+    <div id="forgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Reset Password - Step 1</h3>
+                <button id="closeForgotPassword" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <p class="text-gray-600 text-sm mb-4">Enter your account details to verify your identity</p>
+            
+            <form id="forgotPasswordForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="resetUsername" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your username" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" id="resetPhone" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your phone number" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                    <input type="date" id="resetDOB" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required>
+                </div>
+                
+                <button type="submit" id="verifyUserBtn" 
+                    class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                    Verify Identity
+                </button>
+            </form>
+            
+            <div id="resetMessage" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal - Step 2: Set New Password -->
+    <div id="setNewPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Set New Password - Step 2</h3>
+                <button id="closeSetPassword" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                    <span class="text-green-700 text-sm">Identity verified for: <strong id="verifiedUsername"></strong></span>
+                </div>
+            </div>
+            
+            <p class="text-gray-600 text-sm mb-4">Create a new strong password for your account</p>
+            
+            <form id="setNewPasswordForm" class="space-y-4">
+                <input type="hidden" id="resetSession">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="newPassword" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter new password" required minlength="6">
+                        <button type="button" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 toggle-password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength mt-2" id="newPasswordStrength"></div>
+                    <div class="text-xs text-gray-500 mt-1" id="newPasswordHelp">
+                        Minimum 6 characters
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="confirmNewPassword" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Confirm new password" required>
+                    </div>
+                    <div class="text-xs text-red-500 mt-1 hidden" id="confirmPasswordError">
+                        Passwords do not match
+                    </div>
+                </div>
+                
+                <button type="submit" id="setPasswordBtn" 
+                    class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold">
+                    Set New Password
+                </button>
+            </form>
+            
+            <div id="setPasswordMessage" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="passwordResetSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="card-glass rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-green-500 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">Password Reset Successful!</h3>
+            <p class="text-gray-600 mb-6">Your password has been reset successfully. You can now login with your new password.</p>
+            <button onclick="redirectToLogin()" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold">
+                Go to Login
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+        const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+        const closeForgotPassword = document.getElementById('closeForgotPassword');
+        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+        const setNewPasswordModal = document.getElementById('setNewPasswordModal');
+        const closeSetPassword = document.getElementById('closeSetPassword');
+        const setNewPasswordForm = document.getElementById('setNewPasswordForm');
+        const successModal = document.getElementById('passwordResetSuccessModal');
+
+        // Toggle password visibility
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
+
+        // Toggle password visibility in modals
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle-password') || e.target.closest('.toggle-password')) {
+                const button = e.target.classList.contains('toggle-password') ? e.target : e.target.closest('.toggle-password');
+                const input = button.parentElement.querySelector('input');
+                const icon = button.querySelector('i');
+                
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                icon.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+            }
+        });
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            // Hide previous messages
+            hideMessages();
+
+            // Show loading state
+            setLoginButtonLoading(true);
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store token
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('rememberMe', 'true');
+                    }
+
+                    showSuccess('Login successful! Redirecting...');
+                    
+                    // Redirect based on role
+                    setTimeout(() => {
+                        if (data.user.role === 'admin') {
+                            window.location.href = '/admin';
+                        } else {
+                            window.location.href = '/timetable';
+                        }
+                    }, 1000);
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                setLoginButtonLoading(false);
+            }
+        });
+
+        // Forgot password functionality
+        forgotPasswordBtn.addEventListener('click', () => {
+            resetForgotPasswordForms();
+            forgotPasswordModal.classList.remove('hidden');
+        });
+
+        closeForgotPassword.addEventListener('click', () => {
+            forgotPasswordModal.classList.add('hidden');
+        });
+
+        closeSetPassword.addEventListener('click', () => {
+            setNewPasswordModal.classList.add('hidden');
+        });
+
+        // Step 1: Verify User Identity
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('resetUsername').value;
+            const phone = document.getElementById('resetPhone').value;
+            const date_of_birth = document.getElementById('resetDOB').value;
+
+            setVerifyButtonLoading(true);
+
+            try {
+                const response = await fetch('/api/auth/verify-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, phone, date_of_birth })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Store reset session and move to step 2
+                    document.getElementById('resetSession').value = data.resetSession;
+                    document.getElementById('verifiedUsername').textContent = data.user.username;
+                    
+                    forgotPasswordModal.classList.add('hidden');
+                    setNewPasswordModal.classList.remove('hidden');
+                    
+                } else {
+                    throw new Error(data.error || 'Verification failed');
+                }
+            } catch (error) {
+                document.getElementById('resetMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('resetMessage').textContent = error.message;
+                document.getElementById('resetMessage').classList.remove('hidden');
+            } finally {
+                setVerifyButtonLoading(false);
+            }
+        });
+
+        // Step 2: Set New Password
+        setNewPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resetSession = document.getElementById('resetSession').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+            // Validation
+            if (newPassword !== confirmPassword) {
+                document.getElementById('confirmPasswordError').classList.remove('hidden');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                document.getElementById('setPasswordMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('setPasswordMessage').textContent = 'Password must be at least 6 characters long';
+                document.getElementById('setPasswordMessage').classList.remove('hidden');
+                return;
+            }
+
+            setPasswordButtonLoading(true);
+
+            try {
+                const response = await fetch('/api/auth/reset-password-direct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resetSession, newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    setNewPasswordModal.classList.add('hidden');
+                    successModal.classList.remove('hidden');
+                    
+                } else {
+                    throw new Error(data.error || 'Password reset failed');
+                }
+            } catch (error) {
+                document.getElementById('setPasswordMessage').className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm';
+                document.getElementById('setPasswordMessage').textContent = error.message;
+                document.getElementById('setPasswordMessage').classList.remove('hidden');
+            } finally {
+                setPasswordButtonLoading(false);
+            }
+        });
+
+        // Password strength indicator for new password
+        document.getElementById('newPassword').addEventListener('input', function() {
+            const password = this.value;
+            const strengthBar = document.getElementById('newPasswordStrength');
+            const passwordHelp = document.getElementById('newPasswordHelp');
+            
+            if (password.length === 0) {
+                strengthBar.className = 'password-strength';
+                passwordHelp.textContent = 'Minimum 6 characters';
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = '';
+            
+            // Length check
+            if (password.length >= 6) strength++;
+            if (password.length >= 8) strength++;
+            
+            // Character variety checks
+            if (/[a-z]/.test(password)) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+            
+            // Update strength bar
+            if (strength <= 2) {
+                strengthBar.className = 'password-strength strength-weak';
+                feedback = 'Weak password';
+            } else if (strength <= 4) {
+                strengthBar.className = 'password-strength strength-fair';
+                feedback = 'Fair password';
+            } else if (strength <= 5) {
+                strengthBar.className = 'password-strength strength-good';
+                feedback = 'Good password';
+            } else {
+                strengthBar.className = 'password-strength strength-strong';
+                feedback = 'Strong password';
+            }
+            
+            passwordHelp.textContent = feedback;
+            
+            // Also validate confirm password
+            validateConfirmNewPassword();
+        });
+
+        // Confirm password validation
+        document.getElementById('confirmNewPassword').addEventListener('input', validateConfirmNewPassword);
+
+        function validateConfirmNewPassword() {
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            const confirmError = document.getElementById('confirmPasswordError');
+            
+            if (confirmPassword.length === 0) {
+                confirmError.classList.add('hidden');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                confirmError.classList.remove('hidden');
+            } else {
+                confirmError.classList.add('hidden');
+            }
+        }
+
+        // Utility functions
+        function setLoginButtonLoading(loading) {
+            if (loading) {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<div class="loading-spinner mr-2"></div> Signing in...';
+                loginBtn.classList.remove('hover:scale-105');
+            } else {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Sign In';
+                loginBtn.classList.add('hover:scale-105');
+            }
+        }
+
+        function setVerifyButtonLoading(loading) {
+            const button = document.getElementById('verifyUserBtn');
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '<div class="loading-spinner mr-2"></div> Verifying...';
+            } else {
+                button.disabled = false;
+                button.innerHTML = 'Verify Identity';
+            }
+        }
+
+        function setPasswordButtonLoading(loading) {
+            const button = document.getElementById('setPasswordBtn');
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '<div class="loading-spinner mr-2"></div> Setting Password...';
+            } else {
+                button.disabled = false;
+                button.innerHTML = 'Set New Password';
+            }
+        }
+
+        function showError(message) {
+            errorMessage.classList.remove('hidden');
+            document.getElementById('errorText').textContent = message;
+        }
+
+        function showSuccess(message) {
+            successMessage.classList.remove('hidden');
+            document.getElementById('successText').textContent = message;
+        }
+
+        function hideMessages() {
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+        }
+
+        function resetForgotPasswordForms() {
+            // Reset forms
+            document.getElementById('forgotPasswordForm').reset();
+            document.getElementById('setNewPasswordForm').reset();
+            
+            // Hide messages
+            document.getElementById('resetMessage').classList.add('hidden');
+            document.getElementById('setPasswordMessage').classList.add('hidden');
+            document.getElementById('confirmPasswordError').classList.add('hidden');
+            
+            // Reset strength bar
+            document.getElementById('newPasswordStrength').className = 'password-strength';
+            document.getElementById('newPasswordHelp').textContent = 'Minimum 6 characters';
+        }
+
+        function redirectToLogin() {
+            successModal.classList.add('hidden');
+            window.location.href = '/';
+        }
+
+        // Set maximum date for date of birth in reset form
+        function setMaxDateOfBirth() {
+            const today = new Date();
+            const minAgeDate = new Date();
+            minAgeDate.setFullYear(today.getFullYear() - 13);
+            document.getElementById('resetDOB').max = minAgeDate.toISOString().split('T')[0];
+        }
+
+        // Format phone number as user types
+        document.getElementById('resetPhone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length > 0) {
+                if (!value.startsWith('+')) {
+                    value = '+' + value;
+                }
+            }
+            
+            e.target.value = value;
+        });
+
+        // Check if user is already logged in
+        function checkExistingAuth() {
+            const token = localStorage.getItem('authToken');
+            const rememberMe = localStorage.getItem('rememberMe');
+            const user = localStorage.getItem('user');
+            
+            if (token && rememberMe === 'true' && user) {
+                const userData = JSON.parse(user);
+                // Redirect based on role
+                if (userData.role === 'admin') {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/timetable';
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExistingAuth();
+            setMaxDateOfBirth();
+        });
+    </script>
+</body>
+</html>
